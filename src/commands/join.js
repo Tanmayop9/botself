@@ -34,7 +34,8 @@ module.exports = {
     }
 
     // Check if it's a voice channel
-    if (!channel.isVoice || !channel.isVoice()) {
+    const voiceChannelTypes = ['GUILD_VOICE', 'GUILD_STAGE_VOICE'];
+    if (!voiceChannelTypes.includes(channel.type)) {
       return message.channel.send('❌ The specified channel is not a voice channel.');
     }
 

@@ -65,15 +65,19 @@ module.exports = {
         console.log(`⏹️ Finished: ${title}`);
         voiceState.isPlaying = false;
         voiceState.audioDispatcher = null;
-        voiceState.currentTrack = null;
 
-        // Check for queue
-        if (voiceState.queue.length > 0) {
+        // Check for loop mode first (before clearing currentTrack)
+        if (voiceState.loopMode && voiceState.currentTrack) {
+          const loopUrl = voiceState.currentTrack.url;
+          voiceState.currentTrack = null;
+          await this.execute(client, message, [loopUrl], voiceState);
+        } else if (voiceState.queue.length > 0) {
+          // Check for queue
+          voiceState.currentTrack = null;
           const nextTrack = voiceState.queue.shift();
           await this.execute(client, message, [nextTrack.url], voiceState);
-        } else if (voiceState.loopMode && voiceState.currentTrack) {
-          // Loop current track
-          await this.execute(client, message, [url], voiceState);
+        } else {
+          voiceState.currentTrack = null;
         }
       });
 

@@ -12,10 +12,20 @@ module.exports = {
     const prefix = process.env.PREFIX || '!';
 
     if (args[0]) {
-      // Show specific command help
-      const CommandHandler = require('../utils/commandHandler');
-      const handler = new CommandHandler(client, voiceState);
-      const command = handler.commands.get(args[0].toLowerCase());
+      // Show specific command help by loading command files directly
+      const fs = require('fs');
+      const path = require('path');
+      const commandsPath = path.join(__dirname);
+      const commandFiles = fs.readdirSync(commandsPath).filter((file) => file.endsWith('.js'));
+      
+      let command = null;
+      for (const file of commandFiles) {
+        const cmd = require(path.join(commandsPath, file));
+        if (cmd.name === args[0].toLowerCase() || cmd.aliases?.includes(args[0].toLowerCase())) {
+          command = cmd;
+          break;
+        }
+      }
 
       if (!command) {
         return message.channel.send(`❌ Command \`${args[0]}\` not found.`);
