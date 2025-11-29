@@ -22,7 +22,18 @@ const ensureDownloadsDir = () => {
  * @returns {boolean}
  */
 const isYouTubeURL = (url) => {
-  return url.includes('youtube.com') || url.includes('youtu.be');
+  try {
+    const parsedUrl = new URL(url);
+    const hostname = parsedUrl.hostname.toLowerCase();
+    // Check for exact YouTube domains
+    return hostname === 'youtube.com' || 
+           hostname === 'www.youtube.com' || 
+           hostname === 'm.youtube.com' ||
+           hostname === 'youtu.be' ||
+           hostname === 'www.youtu.be';
+  } catch (e) {
+    return false;
+  }
 };
 
 /**
@@ -236,6 +247,15 @@ const downloadVideo = (url, onProgress = null) => {
 const deleteFile = (filePath) => {
   try {
     if (filePath && fs.existsSync(filePath)) {
+      // Security: Validate file is within the downloads directory
+      const resolvedPath = path.resolve(filePath);
+      const resolvedDownloadsDir = path.resolve(DOWNLOADS_DIR);
+      
+      if (!resolvedPath.startsWith(resolvedDownloadsDir)) {
+        console.error(`Security: Attempted to delete file outside downloads directory: ${filePath}`);
+        return;
+      }
+      
       fs.unlinkSync(filePath);
       console.log(`🗑️ Deleted file: ${filePath}`);
     }
@@ -257,7 +277,8 @@ const cleanupOldDownloads = () => {
       const filePath = path.join(DOWNLOADS_DIR, file);
       const stats = fs.statSync(filePath);
       
-      if (stats.mtimeMs < oneHourAgo) {
+      // Only delete files, not directories
+      if (stats.isFile() && stats.mtimeMs < oneHourAgo) {
         fs.unlinkSync(filePath);
         console.log(`🗑️ Cleaned up old file: ${file}`);
       }
