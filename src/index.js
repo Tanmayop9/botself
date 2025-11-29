@@ -34,7 +34,6 @@ const voiceState = {
   startTime: null,
   afkChannel: null,
   afkTimeout: null,
-  currentDownloadedFile: null,
 };
 
 // Initialize command handler

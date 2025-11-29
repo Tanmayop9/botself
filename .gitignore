@@ -8,9 +8,6 @@ node_modules/
 # Recordings
 recordings/
 
-# Downloads (temporary media files)
-downloads/
-
 # Playlists (user data)
 playlists/
 

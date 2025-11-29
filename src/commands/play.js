@@ -3,7 +3,7 @@
  */
 
 const { autoJoinVoiceChannel } = require('../utils/voiceUtils');
-const { isYouTubeURL, downloadAudio, deleteFile } = require('../utils/youtubeUtils');
+const { isYouTubeURL, getAudioStream } = require('../utils/youtubeUtils');
 
 module.exports = {
   name: 'play',
@@ -30,23 +30,21 @@ module.exports = {
     try {
       let audioSource;
       let title = 'Unknown';
-      let downloadedFile = null;
 
       // Check if it's a YouTube URL
       if (isYouTubeURL(url)) {
-        const loadingMsg = await message.channel.send('🔄 Downloading audio from YouTube...');
+        const loadingMsg = await message.channel.send('🔄 Loading audio from YouTube...');
         
         try {
-          // Download audio using yt-dlp
-          const result = await downloadAudio(url);
-          audioSource = result.filePath;
+          // Get audio stream using play-dl
+          const result = await getAudioStream(url);
+          audioSource = result.stream;
           title = result.title;
-          downloadedFile = result.filePath;
           
           await loadingMsg.edit(`🎵 Now playing: **${title}**`);
-        } catch (downloadError) {
-          console.error('Download error:', downloadError);
-          await loadingMsg.edit(`❌ Failed to download: ${downloadError.message}`);
+        } catch (streamError) {
+          console.error('Stream error:', streamError);
+          await loadingMsg.edit(`❌ Failed to load: ${streamError.message}`);
           return;
         }
       } else {
@@ -71,11 +69,6 @@ module.exports = {
         voiceState.audioDispatcher.destroy();
       }
 
-      // Delete previous downloaded file if exists
-      if (voiceState.currentDownloadedFile) {
-        deleteFile(voiceState.currentDownloadedFile);
-      }
-
       // Play the audio
       const dispatcher = voiceState.connection.playAudio(audioSource);
 
@@ -83,7 +76,6 @@ module.exports = {
       voiceState.isPlaying = true;
       voiceState.isPaused = false;
       voiceState.currentTrack = { title, url };
-      voiceState.currentDownloadedFile = downloadedFile;
       voiceState.startTime = Date.now();
 
       // Update stats
@@ -102,12 +94,6 @@ module.exports = {
         console.log(`⏹️ Finished: ${title}`);
         voiceState.isPlaying = false;
         voiceState.audioDispatcher = null;
-
-        // Delete downloaded file after playback
-        if (voiceState.currentDownloadedFile) {
-          deleteFile(voiceState.currentDownloadedFile);
-          voiceState.currentDownloadedFile = null;
-        }
 
         // Check for loop mode first (before clearing currentTrack)
         if (voiceState.loopMode && voiceState.currentTrack) {
@@ -133,13 +119,15 @@ module.exports = {
         message.channel.send(`❌ Playback error: ${error.message}`);
         voiceState.isPlaying = false;
         voiceState.audioDispatcher = null;
-        
-        // Delete downloaded file on error
-        if (voiceState.currentDownloadedFile) {
-          deleteFile(voiceState.currentDownloadedFile);
-          voiceState.currentDownloadedFile = null;
-        }
       });
+
+      // Handle stream errors
+      if (audioSource && typeof audioSource.on === 'function') {
+        audioSource.on('error', (error) => {
+          console.error('Audio stream error:', error);
+          message.channel.send(`❌ Stream error: ${error.message}`);
+        });
+      }
     } catch (error) {
       console.error('Error playing audio:', error);
       await message.channel.send(`❌ Failed to play audio: ${error.message}`);

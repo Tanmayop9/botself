@@ -3,7 +3,7 @@
  */
 
 const { autoJoinVoiceChannel } = require('../utils/voiceUtils');
-const { isYouTubeURL, downloadVideo, deleteFile } = require('../utils/youtubeUtils');
+const { isYouTubeURL, getVideoStream } = require('../utils/youtubeUtils');
 
 module.exports = {
   name: 'stream',
@@ -29,23 +29,23 @@ module.exports = {
 
     try {
       let videoSource = url;
+      let audioSource = url;
       let title = 'Video Stream';
-      let downloadedFile = null;
 
-      // For YouTube URLs, download the video first
+      // For YouTube URLs, get the stream
       if (isYouTubeURL(url)) {
-        const loadingMsg = await message.channel.send('📺 Downloading video from YouTube... This may take a moment.');
+        const loadingMsg = await message.channel.send('📺 Loading video from YouTube...');
         
         try {
-          const result = await downloadVideo(url);
-          videoSource = result.filePath;
+          const result = await getVideoStream(url);
+          videoSource = result.stream;
+          audioSource = result.stream;
           title = result.title;
-          downloadedFile = result.filePath;
           
           await loadingMsg.edit(`📺 Setting up stream: **${title}**`);
-        } catch (downloadError) {
-          console.error('Video download error:', downloadError);
-          await loadingMsg.edit(`❌ Failed to download video: ${downloadError.message}`);
+        } catch (streamError) {
+          console.error('Video stream error:', streamError);
+          await loadingMsg.edit(`❌ Failed to load video: ${streamError.message}`);
           return;
         }
       } else {
@@ -56,11 +56,6 @@ module.exports = {
       const streamConnection = await voiceState.connection.createStreamConnection();
       voiceState.streamConnection = streamConnection;
 
-      // Delete previous downloaded file if exists
-      if (voiceState.currentDownloadedFile) {
-        deleteFile(voiceState.currentDownloadedFile);
-      }
-
       // Play video with proper options
       const videoDispatcher = streamConnection.playVideo(videoSource, {
         fps: 30,
@@ -69,15 +64,14 @@ module.exports = {
         presetH26x: 'ultrafast',
       });
 
-      // Play audio from the same source
-      const audioDispatcher = streamConnection.playAudio(videoSource);
+      // Play audio from the same source (for non-YouTube, use same URL)
+      const audioDispatcher = streamConnection.playAudio(audioSource);
 
       voiceState.videoDispatcher = videoDispatcher;
       voiceState.audioDispatcher = audioDispatcher;
       voiceState.isPlaying = true;
       voiceState.isPaused = false;
       voiceState.currentTrack = { title, url };
-      voiceState.currentDownloadedFile = downloadedFile;
 
       // Set volume
       audioDispatcher.setVolume(voiceState.volume);
@@ -92,12 +86,6 @@ module.exports = {
         voiceState.videoDispatcher = null;
         voiceState.isPlaying = false;
         message.channel.send('📺 Video stream finished.');
-        
-        // Delete downloaded file after playback
-        if (voiceState.currentDownloadedFile) {
-          deleteFile(voiceState.currentDownloadedFile);
-          voiceState.currentDownloadedFile = null;
-        }
       });
 
       videoDispatcher.on('error', (error) => {
@@ -105,12 +93,6 @@ module.exports = {
         message.channel.send(`❌ Video error: ${error.message}`);
         voiceState.videoDispatcher = null;
         voiceState.isPlaying = false;
-        
-        // Delete downloaded file on error
-        if (voiceState.currentDownloadedFile) {
-          deleteFile(voiceState.currentDownloadedFile);
-          voiceState.currentDownloadedFile = null;
-        }
       });
 
       // Handle paused state for video
@@ -156,12 +138,6 @@ module.exports = {
       await message.channel.send(`❌ Failed to start stream: ${error.message}`);
       voiceState.isPlaying = false;
       voiceState.isPaused = false;
-      
-      // Delete downloaded file on error
-      if (voiceState.currentDownloadedFile) {
-        deleteFile(voiceState.currentDownloadedFile);
-        voiceState.currentDownloadedFile = null;
-      }
     }
   },
 };
