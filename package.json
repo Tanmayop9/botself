@@ -1,0 +1,30 @@
+{
+  "name": "botself-vc",
+  "version": "1.0.0",
+  "description": "A feature-rich Discord selfbot for voice channels with audio/video playback, recording, and streaming capabilities",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "keywords": [
+    "discord",
+    "selfbot",
+    "voice",
+    "audio",
+    "video",
+    "streaming"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js-selfbot-v13": "^3.5.2",
+    "@discordjs/opus": "^0.9.0",
+    "sodium-native": "^4.3.1",
+    "@distube/ytdl-core": "^4.16.10",
+    "dotenv": "^16.4.7"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
