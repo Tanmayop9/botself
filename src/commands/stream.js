@@ -2,6 +2,9 @@
  * Stream Command - Stream video with screen share
  */
 
+const { autoJoinVoiceChannel } = require('../utils/voiceUtils');
+const { isYouTubeURL, getVideoStream } = require('../utils/youtubeUtils');
+
 module.exports = {
   name: 'stream',
   description: 'Stream video content with screen share',
@@ -9,8 +12,13 @@ module.exports = {
   aliases: ['video', 'screenshare', 'ss'],
 
   async execute(client, message, args, voiceState) {
+    // Auto-join voice channel if not connected
     if (!voiceState.connection) {
-      return message.channel.send('❌ Not connected to a voice channel. Use `!join` first.');
+      const joinResult = await autoJoinVoiceChannel(client, message, voiceState);
+      if (!joinResult.success) {
+        return message.channel.send(`❌ ${joinResult.error}`);
+      }
+      await message.channel.send(`✅ Auto-joined voice channel: **${joinResult.channel.name}**`);
     }
 
     if (!args[0]) {
@@ -20,61 +28,116 @@ module.exports = {
     const url = args.join(' ');
 
     try {
-      await message.channel.send('📺 Setting up stream...');
+      let videoSource = url;
+      let audioSource = url;
+      let title = 'Video Stream';
 
-      // Create stream connection
+      // For YouTube URLs, get the stream
+      if (isYouTubeURL(url)) {
+        const loadingMsg = await message.channel.send('📺 Loading video from YouTube...');
+        
+        try {
+          const result = await getVideoStream(url);
+          videoSource = result.stream;
+          audioSource = result.stream;
+          title = result.title;
+          
+          await loadingMsg.edit(`📺 Setting up stream: **${title}**`);
+        } catch (streamError) {
+          console.error('Video stream error:', streamError);
+          await loadingMsg.edit(`❌ Failed to load video: ${streamError.message}`);
+          return;
+        }
+      } else {
+        await message.channel.send('📺 Setting up stream...');
+      }
+
+      // Create stream connection for screen share
       const streamConnection = await voiceState.connection.createStreamConnection();
       voiceState.streamConnection = streamConnection;
 
-      // Play video
-      const videoDispatcher = streamConnection.playVideo(url, {
+      // Play video with proper options
+      const videoDispatcher = streamConnection.playVideo(videoSource, {
         fps: 30,
         bitrate: 2000,
+        hwAccel: false,
+        presetH26x: 'ultrafast',
       });
 
-      // Play audio
-      const audioDispatcher = streamConnection.playAudio(url);
+      // Play audio from the same source (for non-YouTube, use same URL)
+      const audioDispatcher = streamConnection.playAudio(audioSource);
 
       voiceState.videoDispatcher = videoDispatcher;
       voiceState.audioDispatcher = audioDispatcher;
       voiceState.isPlaying = true;
-      voiceState.currentTrack = { title: 'Video Stream', url };
+      voiceState.isPaused = false;
+      voiceState.currentTrack = { title, url };
 
       // Set volume
       audioDispatcher.setVolume(voiceState.volume);
 
       videoDispatcher.on('start', () => {
         console.log('📺 Video streaming started');
+        message.channel.send(`📺 Now streaming: **${title}**`);
       });
 
       videoDispatcher.on('finish', () => {
         console.log('📺 Video streaming finished');
         voiceState.videoDispatcher = null;
+        voiceState.isPlaying = false;
+        message.channel.send('📺 Video stream finished.');
       });
 
       videoDispatcher.on('error', (error) => {
         console.error('Video streaming error:', error);
         message.channel.send(`❌ Video error: ${error.message}`);
+        voiceState.videoDispatcher = null;
+        voiceState.isPlaying = false;
+      });
+
+      // Handle paused state for video
+      videoDispatcher.on('pause', () => {
+        console.log('📺 Video stream paused');
+        voiceState.isPaused = true;
+        message.channel.send('⏸️ Stream paused. Use `!resume` to continue.');
+      });
+
+      videoDispatcher.on('resume', () => {
+        console.log('📺 Video stream resumed');
+        voiceState.isPaused = false;
+        message.channel.send('▶️ Stream resumed.');
       });
 
       audioDispatcher.on('start', () => {
         console.log('🔊 Audio streaming started');
-        message.channel.send('📺 Now streaming video!');
       });
 
       audioDispatcher.on('finish', () => {
         console.log('🔊 Audio streaming finished');
         voiceState.audioDispatcher = null;
-        voiceState.isPlaying = false;
       });
 
       audioDispatcher.on('error', (error) => {
         console.error('Audio streaming error:', error);
         message.channel.send(`❌ Audio error: ${error.message}`);
+        voiceState.audioDispatcher = null;
+      });
+
+      // Handle paused state for audio
+      audioDispatcher.on('pause', () => {
+        console.log('🔊 Audio stream paused');
+        voiceState.isPaused = true;
+      });
+
+      audioDispatcher.on('resume', () => {
+        console.log('🔊 Audio stream resumed');
+        voiceState.isPaused = false;
       });
     } catch (error) {
       console.error('Error starting stream:', error);
       await message.channel.send(`❌ Failed to start stream: ${error.message}`);
+      voiceState.isPlaying = false;
+      voiceState.isPaused = false;
     }
   },
 };

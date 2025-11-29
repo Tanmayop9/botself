@@ -2,7 +2,8 @@
  * Play Command - Play audio from YouTube or URL
  */
 
-const ytdl = require('@distube/ytdl-core');
+const { autoJoinVoiceChannel } = require('../utils/voiceUtils');
+const { isYouTubeURL, getAudioStream } = require('../utils/youtubeUtils');
 
 module.exports = {
   name: 'play',
@@ -11,8 +12,13 @@ module.exports = {
   aliases: ['p'],
 
   async execute(client, message, args, voiceState) {
+    // Auto-join voice channel if not connected
     if (!voiceState.connection) {
-      return message.channel.send('❌ Not connected to a voice channel. Use `!join` first.');
+      const joinResult = await autoJoinVoiceChannel(client, message, voiceState);
+      if (!joinResult.success) {
+        return message.channel.send(`❌ ${joinResult.error}`);
+      }
+      await message.channel.send(`✅ Auto-joined voice channel: **${joinResult.channel.name}**`);
     }
 
     if (!args[0]) {
@@ -26,14 +32,21 @@ module.exports = {
       let title = 'Unknown';
 
       // Check if it's a YouTube URL
-      if (ytdl.validateURL(url)) {
-        const info = await ytdl.getInfo(url);
-        title = info.videoDetails.title;
-        audioSource = ytdl(url, {
-          quality: 'highestaudio',
-          filter: 'audioonly',
-        });
-        await message.channel.send(`🎵 Now playing: **${title}**`);
+      if (isYouTubeURL(url)) {
+        const loadingMsg = await message.channel.send('🔄 Loading audio from YouTube...');
+        
+        try {
+          // Get audio stream using play-dl
+          const result = await getAudioStream(url);
+          audioSource = result.stream;
+          title = result.title;
+          
+          await loadingMsg.edit(`🎵 Now playing: **${title}**`);
+        } catch (streamError) {
+          console.error('Stream error:', streamError);
+          await loadingMsg.edit(`❌ Failed to load: ${streamError.message}`);
+          return;
+        }
       } else {
         // Treat as direct URL
         audioSource = url;
@@ -107,6 +120,14 @@ module.exports = {
         voiceState.isPlaying = false;
         voiceState.audioDispatcher = null;
       });
+
+      // Handle stream errors
+      if (audioSource && typeof audioSource.on === 'function') {
+        audioSource.on('error', (error) => {
+          console.error('Audio stream error:', error);
+          message.channel.send(`❌ Stream error: ${error.message}`);
+        });
+      }
     } catch (error) {
       console.error('Error playing audio:', error);
       await message.channel.send(`❌ Failed to play audio: ${error.message}`);
