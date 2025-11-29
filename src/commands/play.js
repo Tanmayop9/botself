@@ -41,6 +41,16 @@ module.exports = {
         await message.channel.send(`🎵 Now playing: **${title}**`);
       }
 
+      // Add previous track to history before playing new one
+      if (voiceState.currentTrack) {
+        if (!voiceState.history) voiceState.history = [];
+        voiceState.history.push(voiceState.currentTrack);
+        // Keep only last 50 tracks in history
+        if (voiceState.history.length > 50) {
+          voiceState.history.shift();
+        }
+      }
+
       // Stop previous audio if playing
       if (voiceState.audioDispatcher) {
         voiceState.audioDispatcher.destroy();
@@ -53,6 +63,12 @@ module.exports = {
       voiceState.isPlaying = true;
       voiceState.isPaused = false;
       voiceState.currentTrack = { title, url };
+      voiceState.startTime = Date.now();
+
+      // Update stats
+      if (client.stats) {
+        client.stats.tracksPlayed++;
+      }
 
       // Set volume
       dispatcher.setVolume(voiceState.volume);
@@ -72,12 +88,16 @@ module.exports = {
           voiceState.currentTrack = null;
           await this.execute(client, message, [loopUrl], voiceState);
         } else if (voiceState.queue.length > 0) {
-          // Check for queue
+          // Add current track back to end of queue if queue loop is enabled
+          if (voiceState.loopQueue && voiceState.currentTrack) {
+            voiceState.queue.push({ ...voiceState.currentTrack });
+          }
           voiceState.currentTrack = null;
           const nextTrack = voiceState.queue.shift();
           await this.execute(client, message, [nextTrack.url], voiceState);
         } else {
           voiceState.currentTrack = null;
+          voiceState.startTime = null;
         }
       });
 

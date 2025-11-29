@@ -24,7 +24,16 @@ const voiceState = {
   isPaused: false,
   volume: 1.0,
   loopMode: false,
+  loopQueue: false,
+  shuffleMode: false,
   queue: [],
+  history: [],
+  autoplay: false,
+  bassBoost: false,
+  nightcore: false,
+  startTime: null,
+  afkChannel: null,
+  afkTimeout: null,
 };
 
 // Initialize command handler
@@ -33,25 +42,35 @@ const commandHandler = new CommandHandler(client, voiceState);
 // Configuration
 const PREFIX = process.env.PREFIX || '!';
 
+// Parse authorized users from environment variable
+const AUTHORIZED_USERS = process.env.AUTHORIZED_USERS
+  ? process.env.AUTHORIZED_USERS.split(',').map((id) => id.trim())
+  : [];
+
+// Stats tracking
+const stats = {
+  commandsExecuted: 0,
+  tracksPlayed: 0,
+  uptime: Date.now(),
+};
+
 client.on('ready', async () => {
   console.log('═══════════════════════════════════════════════════════════');
   console.log(`  🎵 Discord VC Selfbot is now online!`);
   console.log(`  📌 Logged in as: ${client.user.tag}`);
   console.log(`  🔧 Prefix: ${PREFIX}`);
+  console.log(`  👥 Authorized Users: ${AUTHORIZED_USERS.length > 0 ? AUTHORIZED_USERS.join(', ') : 'Owner only'}`);
   console.log(`  📋 Commands: ${PREFIX}help`);
+  console.log(`  🌐 Servers: ${client.guilds.cache.size}`);
   console.log('═══════════════════════════════════════════════════════════');
-
-  // Set custom activity if configured
-  if (process.env.ACTIVITY_TEXT) {
-    client.user.setActivity(process.env.ACTIVITY_TEXT, {
-      type: process.env.ACTIVITY_TYPE || 'PLAYING',
-    });
-  }
 });
 
 client.on('messageCreate', async (message) => {
-  // Only respond to messages from the selfbot owner
-  if (message.author.id !== client.user.id) return;
+  // Check if user is authorized (owner or in authorized users list)
+  const isOwner = message.author.id === client.user.id;
+  const isAuthorized = AUTHORIZED_USERS.includes(message.author.id);
+
+  if (!isOwner && !isAuthorized) return;
 
   // Check for command prefix
   if (!message.content.startsWith(PREFIX)) return;
@@ -60,6 +79,7 @@ client.on('messageCreate', async (message) => {
   const commandName = args.shift().toLowerCase();
 
   try {
+    stats.commandsExecuted++;
     await commandHandler.execute(commandName, message, args);
   } catch (error) {
     console.error(`Error executing command ${commandName}:`, error);
@@ -77,8 +97,31 @@ client.on('voiceStateUpdate', (oldState, newState) => {
     voiceState.isPlaying = false;
     voiceState.isPaused = false;
     voiceState.queue = [];
+    voiceState.startTime = null;
+  }
+
+  // Auto-rejoin AFK channel if configured
+  if (voiceState.afkChannel && oldState.member?.id === client.user.id && !newState.channelId) {
+    setTimeout(async () => {
+      try {
+        const channel = client.channels.cache.get(voiceState.afkChannel);
+        if (channel) {
+          await client.voice.joinChannel(channel, {
+            selfMute: true,
+            selfDeaf: true,
+            selfVideo: false,
+          });
+          console.log('🔄 Auto-rejoined AFK channel');
+        }
+      } catch (error) {
+        console.error('Failed to auto-rejoin:', error);
+      }
+    }, 3000);
   }
 });
+
+// Export stats for commands
+client.stats = stats;
 
 // Error handling
 client.on('error', (error) => {

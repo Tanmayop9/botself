@@ -46,42 +46,67 @@ module.exports = {
 
     // Show all commands
     const helpText = `
-**🎵 Discord VC Selfbot - Commands**
+**🎵 Discord VC Selfbot - Advanced Commands**
 
 **Voice Channel:**
 \`${prefix}join [channel_id]\` - Join a voice channel
 \`${prefix}leave\` - Leave the current voice channel
 \`${prefix}deaf\` - Toggle server deaf
 \`${prefix}mute\` - Toggle server mute
+\`${prefix}247\` - Toggle 24/7 mode (auto-rejoin)
+\`${prefix}afk [channel_id|off]\` - Set AFK auto-rejoin channel
 
 **Audio Playback:**
-\`${prefix}play <url/search>\` - Play audio from YouTube or URL
-\`${prefix}pause\` - Pause current playback
-\`${prefix}resume\` - Resume paused playback
-\`${prefix}stop\` - Stop playback and clear queue
-\`${prefix}skip\` - Skip to next track in queue
-\`${prefix}volume <0-200>\` - Set playback volume
-\`${prefix}queue\` - View the current queue
-\`${prefix}nowplaying\` - Show current track info
-\`${prefix}loop\` - Toggle loop mode
+\`${prefix}play <url>\` - Play audio from YouTube or URL
+\`${prefix}pause\` - Pause playback
+\`${prefix}resume\` - Resume playback
+\`${prefix}stop\` - Stop and clear queue
+\`${prefix}skip\` - Skip to next track
+\`${prefix}previous\` - Play previous track
+\`${prefix}replay\` - Replay current track
+\`${prefix}seek <time>\` - Seek to position
+\`${prefix}volume <0-200>\` - Set volume
+\`${prefix}loop\` - Toggle track loop
+\`${prefix}loopqueue\` - Toggle queue loop
+
+**Queue Management:**
+\`${prefix}queue\` - View queue
+\`${prefix}add <url>\` - Add to queue
+\`${prefix}remove <pos>\` - Remove from queue
+\`${prefix}move <from> <to>\` - Move track position
+\`${prefix}shuffle\` - Shuffle queue
+\`${prefix}clear\` - Clear queue
+\`${prefix}nowplaying\` - Current track info
+\`${prefix}grab\` - Get current track URL
+
+**Playlists:**
+\`${prefix}savequeue <name>\` - Save queue as playlist
+\`${prefix}loadqueue <name>\` - Load a playlist
+\`${prefix}playlists\` - List saved playlists
+\`${prefix}deleteplaylist <name>\` - Delete a playlist
+
+**Audio Effects:**
+\`${prefix}filters [type]\` - Toggle audio filters
+\`${prefix}speed <0.5-2.0>\` - Set playback speed
+\`${prefix}bitrate\` - Show channel bitrate
 
 **Video/Streaming:**
-\`${prefix}stream <url>\` - Stream video with screen share
-\`${prefix}stopstream\` - Stop video streaming
+\`${prefix}stream <url>\` - Stream video (screen share)
+\`${prefix}stopstream\` - Stop streaming
 
 **Recording:**
-\`${prefix}record <user_id>\` - Record user's audio
-\`${prefix}stoprecord\` - Stop recording
-\`${prefix}recordvideo <user_id>\` - Record user's video stream
+\`${prefix}record <user_id>\` - Record user audio
+\`${prefix}stoprecord\` - Stop audio recording
+\`${prefix}recordvideo <user_id>\` - Record user video
 \`${prefix}stoprecordvideo\` - Stop video recording
 
 **Utility:**
-\`${prefix}status <text>\` - Set custom status
-\`${prefix}ping\` - Check bot latency
-\`${prefix}info\` - Show voice connection info
-\`${prefix}help [command]\` - Show this help message
+\`${prefix}ping\` - Check latency
+\`${prefix}info\` - Voice connection info
+\`${prefix}stats\` - Bot statistics
+\`${prefix}help [cmd]\` - Show help
 
-**Tip:** Use \`${prefix}help <command>\` for detailed info about a specific command.
+Use \`${prefix}help <command>\` for detailed info.
 `;
 
     await message.channel.send(helpText);

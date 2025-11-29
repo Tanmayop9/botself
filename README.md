@@ -1,21 +1,34 @@
 # 🎵 Discord VC Selfbot
 
-A feature-rich Discord selfbot for voice channels with audio/video playback, recording, and streaming capabilities. Built with [discord.js-selfbot-v13](https://github.com/aiko-chan-ai/discord.js-selfbot-v13).
+A feature-rich, advanced Discord selfbot for voice channels with audio/video playback, recording, streaming, playlists, and audio effects. Built with [discord.js-selfbot-v13](https://github.com/aiko-chan-ai/discord.js-selfbot-v13).
 
 ## ✨ Features
 
 ### Voice Channel
 - 🔊 Join and leave voice channels
 - 🔇 Toggle self-mute and self-deaf
-- 📊 View voice connection info
+- 🔄 24/7 mode with auto-rejoin
+- 📊 View detailed voice connection info
 
 ### Audio Playback
 - ▶️ Play audio from YouTube URLs
 - ⏸️ Pause and resume playback
 - ⏹️ Stop playback
+- ⏭️ Skip / Previous track navigation
 - 🔊 Volume control (0-200%)
-- 📋 Queue management (add, skip, clear)
-- 🔁 Loop mode
+- 🔁 Track and queue loop modes
+- 📜 Play history with previous track support
+
+### Queue Management
+- 📋 Add, remove, and view queue
+- 🔀 Shuffle queue
+- 📍 Move tracks to different positions
+- 💾 Save and load playlists
+
+### Audio Effects
+- 🔊 Bass Boost
+- 🌙 Nightcore
+- ⏩ Playback speed control (0.5x - 2.0x)
 
 ### Video Streaming
 - 📺 Stream video with screen share
@@ -27,9 +40,10 @@ A feature-rich Discord selfbot for voice channels with audio/video playback, rec
 - 💾 Save recordings as PCM/MKV files
 
 ### Utility
-- 🎮 Custom activity status
 - 🏓 Ping/latency check
-- ℹ️ Voice connection info
+- 📊 Bot statistics
+- ℹ️ Detailed voice connection info
+- 👥 Authorized users support
 
 ## 📋 Prerequisites
 
@@ -83,6 +97,7 @@ sudo dnf install ffmpeg
    ```env
    DISCORD_TOKEN=your_discord_token_here
    PREFIX=!
+   AUTHORIZED_USERS=user_id_1,user_id_2
    ```
 
 4. **Start the bot:**
@@ -96,8 +111,7 @@ sudo dnf install ffmpeg
 |----------|-------------|---------|
 | `DISCORD_TOKEN` | Your Discord account token (required) | - |
 | `PREFIX` | Command prefix | `!` |
-| `ACTIVITY_TEXT` | Custom activity text | - |
-| `ACTIVITY_TYPE` | Activity type (PLAYING, WATCHING, etc.) | `PLAYING` |
+| `AUTHORIZED_USERS` | Comma-separated user IDs who can control the bot | - |
 
 ## 📖 Commands
 
@@ -108,6 +122,8 @@ sudo dnf install ffmpeg
 | `!leave` | Leave the current voice channel |
 | `!deaf` | Toggle self-deaf |
 | `!mute` | Toggle self-mute |
+| `!247` | Toggle 24/7 mode (auto-rejoin) |
+| `!afk [channel_id\|off]` | Set AFK auto-rejoin channel |
 
 ### Audio Playback
 | Command | Description |
@@ -117,16 +133,39 @@ sudo dnf install ffmpeg
 | `!resume` | Resume paused playback |
 | `!stop` | Stop playback and clear queue |
 | `!skip` | Skip to next track |
+| `!previous` | Play previous track from history |
+| `!replay` | Replay current track |
+| `!seek <time>` | Seek to position (e.g., 1:30) |
 | `!volume <0-200>` | Set playback volume |
-| `!loop` | Toggle loop mode |
+| `!loop` | Toggle track loop mode |
+| `!loopqueue` | Toggle queue loop mode |
 
 ### Queue Management
 | Command | Description |
 |---------|-------------|
 | `!queue` | View the current queue |
 | `!add <url>` | Add a track to queue |
+| `!remove <position>` | Remove track from queue |
+| `!move <from> <to>` | Move track position |
+| `!shuffle` | Shuffle the queue |
 | `!clear` | Clear the queue |
 | `!nowplaying` | Show current track info |
+| `!grab` | Get current track URL |
+
+### Playlists
+| Command | Description |
+|---------|-------------|
+| `!savequeue <name>` | Save queue as playlist |
+| `!loadqueue <name>` | Load a saved playlist |
+| `!playlists` | List all saved playlists |
+| `!deleteplaylist <name>` | Delete a playlist |
+
+### Audio Effects
+| Command | Description |
+|---------|-------------|
+| `!filters [type]` | Toggle audio filters (bassboost, nightcore) |
+| `!speed <0.5-2.0>` | Set playback speed |
+| `!bitrate` | Show channel bitrate |
 
 ### Video/Streaming
 | Command | Description |
@@ -145,9 +184,9 @@ sudo dnf install ffmpeg
 ### Utility
 | Command | Description |
 |---------|-------------|
-| `!status [type] <text>` | Set custom status |
 | `!ping` | Check bot latency |
 | `!info` | Show voice connection info |
+| `!stats` | Show bot statistics |
 | `!help [command]` | Show help message |
 
 ## 🔐 Getting Your Discord Token
